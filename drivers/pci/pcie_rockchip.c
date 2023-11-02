@@ -1,4 +1,5 @@
 
+#define DEBUG 1
 #include <common.h>
 #include <dm.h>
 #include <pci.h>
@@ -497,8 +498,10 @@ static int config_link(struct udevice *dev)
 	bool is_msi = false, is_msix = false;
 	u32 cmd;
 
-	rockchip_pcie_rd_other_conf((void *)rockchip, PCI_CLASS_REVISION, 4, &value);
-	if ((value & (0xffff << 16)) !=
+    rockchip_pcie_rd_other_conf((void *)rockchip, PCI_VENDOR_ID, 4, &value);
+    debug("vendor = 0x%x\n", value);
+    rockchip_pcie_rd_other_conf((void *)rockchip, PCI_CLASS_REVISION, 4, &value);
+    if ((value & (0xffff << 16)) !=
         (PCI_CLASS_MSC | PCI_SUBCLASS_NVME)) {
         debug("PCIe: device's classe code & revision ID = 0x%x\n",
                value);
@@ -544,10 +547,10 @@ static int config_link(struct udevice *dev)
     /* write EP's command register, disable EP */
     rockchip_pcie_wr_other_conf((void *)rockchip, PCI_COMMAND, 2, 0x0);
 
-	for (i = 0; i < rockchip->bus.region_count; i++) {
+    for (i = 0; i < rockchip->bus.region_count; i++) {
         if (rockchip->bus.regions[i].flags == PCI_REGION_MEM) {
             /* configre BAR0 */
-			rockchip_pcie_wr_other_conf((void *)rockchip, PCI_BASE_ADDRESS_0, 4,
+            rockchip_pcie_wr_other_conf((void *)rockchip, PCI_BASE_ADDRESS_0, 4,
                                         rockchip->bus.regions[i].bus_start);
             /* configre BAR1 */
             rockchip_pcie_wr_other_conf((void *)rockchip, PCI_BASE_ADDRESS_1,
@@ -556,7 +559,7 @@ static int config_link(struct udevice *dev)
         }
     }
 
-	/* write EP's command register */
+    /* write EP's command register */
     rockchip_pcie_wr_other_conf((void *)rockchip, PCI_COMMAND, 2, 0x0);
 
     /* write RC's IO base and limit including upper */
@@ -746,18 +749,18 @@ static int rockchip_pcie_init_port(struct pcie_rockchip *rockchip)
 	/* assert aclk_rst */
 	rkcru_pcie_soft_reset(PCIE_RESET_ACLK, 1);
 	/* assert pclk_rst */
-	rkcru_pcie_soft_reset(PCIE_RESET_ACLK, 1);
+	rkcru_pcie_soft_reset(PCIE_RESET_PCLK, 1);
 	/* assert pm_rst */
 	rkcru_pcie_soft_reset(PCIE_RESET_PM, 1);
 
 	udelay(10); /* need a nearly 10us delay per design */
 
-	/* deassert aclk_rst */
+	/* deassert pm_rst */
 	rkcru_pcie_soft_reset(PCIE_RESET_PM, 0);
 	/* deassert pclk_rst */
-	rkcru_pcie_soft_reset(PCIE_RESET_ACLK, 0);
-	/* deassert pm_rst */
 	rkcru_pcie_soft_reset(PCIE_RESET_PCLK, 0);
+	/* deassert aclk_rst */
+	rkcru_pcie_soft_reset(PCIE_RESET_ACLK, 0);
 
 	phy_init(&rockchip->phy);
 
